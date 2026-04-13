@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = "mysql://garage_user:Admin1234@localhost:3306/garage221"
+}
+
+model Mecanicien {
+  id          Int           @id @default(autoincrement())
+  prenom      String
+  nom         String
+  email       String        @unique
+  telephone   String?
+  specialite  String
+  interventions Intervention[]
+
+  @@map("Mecanicien")
+}
+
+model Vehicule {
+  id               Int           @id @default(autoincrement())
+  immatriculation  String        @unique
+  marque           String
+  modele           String
+  nomProprietaire  String
+  telProprietaire  String?
+  interventions    Intervention[]
+
+  @@map("Vehicule")
+}
+
+model Intervention {
+  id               Int            @id @default(autoincrement())
+  dateIntervention DateTime       @db.Date
+  description      String         @db.Text
+  statut           StatutIntervention @default(EN_ATTENTE)
+  coutMainOeuvre   Float
+  mecanicienId     Int
+  vehiculeId       Int
+  mecanicien       Mecanicien     @relation(fields: [mecanicienId], references: [id])
+  vehicule         Vehicule       @relation(fields: [vehiculeId], references: [id])
+  piecesUtilisees  PieceUtilisee[]
+
+  @@map("Intervention")
+}
+
+model PieceUtilisee {
+  id             Int          @id @default(autoincrement())
+  libelle        String
+  quantite       Int
+  prixUnitaire   Float
+  interventionId Int
+  intervention   Intervention @relation(fields: [interventionId], references: [id])
+
+  @@map("PieceUtilisee")
+}
+
+enum StatutIntervention {
+  EN_ATTENTE
+  EN_COURS
+  TERMINEE
+}
