@@ -3,7 +3,7 @@ const { z } = require('zod');
 const mecanicienSchema = z.object({
   prenom:     z.string().min(2).max(50),
   nom:        z.string().min(2).max(50),
-  email:      z.string().email(),
+  email:      z.string().email({ message: 'Email invalide.' }),
   telephone:  z.string().min(8).max(20).optional(),
   specialite: z.enum(['moteur', 'carrosserie', 'electricite', 'autre']),
 });
@@ -19,8 +19,8 @@ const vehiculeSchema = z.object({
 const interventionSchema = z.object({
   mecanicienId:     z.number().int().positive(),
   vehiculeId:       z.number().int().positive(),
-  dateIntervention: z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
-    message: 'DateIntervention invalide',
+  dateIntervention: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'DateIntervention doit être au format YYYY-MM-DD',
   }),
   description:      z.string().min(5),
   statut:           z.enum(['EN_ATTENTE', 'EN_COURS', 'TERMINEE']).optional(),

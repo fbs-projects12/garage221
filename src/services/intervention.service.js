@@ -18,8 +18,14 @@ const create = async (data) => {
   const veh = await prisma.vehicule.findUnique({ where: { id: parseInt(data.vehiculeId) } });
   if (!veh) { const e = new Error('Véhicule introuvable'); e.status = 404; throw e; }
 
+  const date = new Date(data.dateIntervention);
+  if (Number.isNaN(date.getTime())) {
+    const e = new Error('DateIntervention invalide, format attendu YYYY-MM-DD.');
+    e.status = 400; throw e;
+  }
+
   return prisma.intervention.create({
-    data: { ...data, statut: 'EN_ATTENTE' },
+    data: { ...data, dateIntervention: date, statut: 'EN_ATTENTE' },
     include: { mecanicien: true, vehicule: true, piecesUtilisees: true }
   });
 };
@@ -27,9 +33,20 @@ const create = async (data) => {
 const update = async (id, data) => {
   const i = await prisma.intervention.findUnique({ where: { id: parseInt(id) } });
   if (!i) { const e = new Error('Intervention introuvable'); e.status = 404; throw e; }
+
+  const payload = { ...data };
+  if (data.dateIntervention) {
+    const date = new Date(data.dateIntervention);
+    if (Number.isNaN(date.getTime())) {
+      const e = new Error('DateIntervention invalide, format attendu YYYY-MM-DD.');
+      e.status = 400; throw e;
+    }
+    payload.dateIntervention = date;
+  }
+
   return prisma.intervention.update({
     where: { id: parseInt(id) },
-    data,
+    data: payload,
     include: { mecanicien: true, vehicule: true, piecesUtilisees: true }
   });
 };
