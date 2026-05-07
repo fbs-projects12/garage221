@@ -65,9 +65,10 @@ COPY . .
 USER garage
 
 # Variables d'environnement disponibles dans le conteneur au démarrage
-ENV NODE_ENV=production   # Active le mode production dans Express (logs réduits, pas de stack traces)
-ENV PORT=3000             # Port sur lequel l'app va écouter
-
+# NODE_ENV=production active le mode production dans Express (logs réduits)
+ENV NODE_ENV=production
+# PORT=3000 est le port sur lequel l'app va écouter
+ENV PORT=3000
 # Déclarer le port que le conteneur expose vers l'extérieur.
 # Cette ligne est documentaire : elle n'ouvre pas le port, c'est docker run -p qui le fait.
 EXPOSE 3000
