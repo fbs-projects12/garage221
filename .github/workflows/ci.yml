@@ -1,0 +1,72 @@
+# ==============================================================================
+# WORKFLOW GITHUB ACTIONS — Build et Push de l'image Docker sur Docker Hub
+# ==============================================================================
+# Ce fichier est exécuté automatiquement par GitHub à chaque push sur main.
+# Il construit l'image Docker du projet et la publie sur Docker Hub.
+# ==============================================================================
+
+name: Build & Push Docker Image
+
+# ------------------------------------------------------------------------------
+# DÉCLENCHEUR : ce workflow se lance uniquement sur un push vers la branche main
+# ------------------------------------------------------------------------------
+on:
+  push:
+    branches:
+      - main
+
+# ------------------------------------------------------------------------------
+# JOBS : liste des tâches à exécuter
+# ------------------------------------------------------------------------------
+jobs:
+  docker:
+    name: Build and Push to Docker Hub
+
+    # Le workflow tourne sur une machine virtuelle Ubuntu fournie par GitHub
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ÉTAPE 1 — Récupérer le code source du dépôt
+      # Sans cette étape, la machine virtuelle n'a pas accès aux fichiers du projet
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # ÉTAPE 2 — Se connecter à Docker Hub
+      # Les identifiants sont stockés dans les secrets GitHub (Settings → Secrets)
+      # et jamais écrits en clair dans ce fichier
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}   # Ton pseudo Docker Hub
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}   # Ton mot de passe ou token Docker Hub
+
+      # ÉTAPE 3 — Activer Docker Buildx
+      # Buildx est un builder avancé qui permet la mise en cache et le build multi-plateforme
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ÉTAPE 4 — Construire et pousser l'image Docker
+      # Cette étape lit le Dockerfile à la racine du projet (context: .)
+      # et publie l'image avec deux tags différents sur Docker Hub
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          # Dossier contenant le Dockerfile (. = racine du projet)
+          context: .
+
+          # push: true → l'image est envoyée sur Docker Hub après le build
+          push: true
+
+          # Deux tags sont créés à chaque push :
+          #   - :latest    → toujours pointe sur la version la plus récente
+          #   - :abc123... → le SHA du commit Git (permet de retrouver exactement
+          #                  quelle version du code correspond à quelle image)
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/garage221:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/garage221:${{ github.sha }}
+
+          # Mise en cache du build via GitHub Actions Cache
+          # Évite de tout reconstruire si les dépendances n'ont pas changé
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

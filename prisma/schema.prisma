@@ -7,7 +7,10 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = "mysql://garage_user:Admin1234@localhost:3306/garage221"
+  // L'URL est lue depuis la variable d'environnement DATABASE_URL
+  // En local : définie dans le fichier .env
+  // En Docker : injectée par docker-compose.yml
+  url      = env("DATABASE_URL")
 }
 
 model Mecanicien {

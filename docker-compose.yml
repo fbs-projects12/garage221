@@ -1,0 +1,94 @@
+# ==============================================================================
+# DOCKER COMPOSE — Garage 221
+# ==============================================================================
+# Lance deux conteneurs qui communiquent entre eux sur un réseau privé :
+#   - mysql    : la base de données MySQL
+#   - app      : l'application Node.js / Express / Prisma
+#
+# Commande pour démarrer : docker compose up
+# Commande pour arrêter  : docker compose down
+# Commande pour tout supprimer (données incluses) : docker compose down -v
+# ==============================================================================
+
+services:
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 1 — Base de données MySQL
+  # ----------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0          # Image officielle MySQL version 8
+    container_name: garage221-db
+
+    # Variables d'environnement pour initialiser MySQL au premier démarrage
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234              # Mot de passe du compte root MySQL
+      MYSQL_DATABASE: garage221              # Nom de la base de données à créer
+      MYSQL_USER: garage_user                # Utilisateur applicatif
+      MYSQL_PASSWORD: "fbs123456789#"        # Mot de passe de cet utilisateur
+
+    # Volume persistant : les données MySQL survivent aux redémarrages du conteneur
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    # Healthcheck : attend que MySQL soit vraiment prêt avant de démarrer l'app
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    # Réseau interne partagé avec le service app
+    networks:
+      - garage-network
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 2 — Application Node.js
+  # ----------------------------------------------------------------------------
+  app:
+    # Construire l'image depuis le Dockerfile présent dans ce dossier
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: garage221-app
+
+    # L'app ne démarre qu'une fois MySQL prêt (healthcheck passé)
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    # Variables d'environnement injectées dans le conteneur de l'app
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Ici "mysql" est le nom du service Docker (pas localhost !)
+      # Docker résout automatiquement "mysql" vers l'IP du conteneur MySQL
+      DATABASE_URL: "mysql://garage_user:fbs123456789#@mysql:3306/garage221"
+
+    # Mapper le port 3000 du conteneur sur le port 3000 de ta machine
+    # Syntaxe : "PORT_MACHINE:PORT_CONTENEUR"
+    ports:
+      - "3000:3000"
+
+    # Commande de démarrage : crée les tables dans MySQL puis lance l'app
+    # prisma db push lit le schema.prisma et crée les tables si elles n'existent pas
+    command: sh -c "npx prisma db push && node server.js"
+
+    # Réseau interne partagé avec le service mysql
+    networks:
+      - garage-network
+
+# ------------------------------------------------------------------------------
+# VOLUMES — Stockage persistant déclaré au niveau global
+# ------------------------------------------------------------------------------
+volumes:
+  mysql_data:
+    # Ce volume est géré par Docker : les données restent même si le conteneur est supprimé
+
+# ------------------------------------------------------------------------------
+# RÉSEAUX — Réseau privé entre les conteneurs
+# ------------------------------------------------------------------------------
+networks:
+  garage-network:
+    # Réseau bridge isolé : seuls les conteneurs déclarés ici peuvent se parler
+    driver: bridge
